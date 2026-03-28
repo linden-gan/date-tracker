@@ -24,6 +24,9 @@ profile.cov
 go.work
 go.work.sum
 
+# Go binary
+date-tracker
+
 # env file
 .env
 
