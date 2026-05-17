@@ -27,11 +27,12 @@ to quickly create a Cobra application.`,
 			query[arg] = struct{}{}
 		}
 		Print(Query(query, yamlTasks))
+		Marshal(yamlTasks)
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		// Return dynamic completions based on user's data
-		_, validArgs := Unmarshal()
-		return validArgs, cobra.ShellCompDirectiveNoFileComp
+		_, allStrings := Unmarshal()
+		return allStrings, cobra.ShellCompDirectiveNoFileComp
 	},
 }
 

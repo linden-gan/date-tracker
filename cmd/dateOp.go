@@ -46,7 +46,7 @@ func deduceYear(date string) int {
 
 /*
 Map a slice of mmdd strings to a slice of time.Time.
-Example input: [12/25, 12/30, 1/2, 1/6] (say today is 12/31)
+Example input: [12/25, 12/30, 1/2, 1/6]
 */
 func strings2Dates(input []string) []time.Time {
 	res := make([]time.Time, len(input))
@@ -83,9 +83,9 @@ func countDays(a, b time.Time) int {
 	// Normalize to midnight
 	a = string2Date(date2String(a), a.Year())
 	b = string2Date(date2String(b), b.Year())
-	if a.After(b) {
-		a, b = b, a
-	}
+	// if a.After(b) {
+	// 	a, b = b, a
+	// }
 	diff := b.Sub(a)
 	days := math.Round(float64(diff) / float64(time.Hour) / 24.0)
 	return int(days)

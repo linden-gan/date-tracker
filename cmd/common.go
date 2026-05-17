@@ -4,7 +4,7 @@ Copyright © 2025 ganlinden@gmail.com
 package cmd
 
 import (
-	"path/filepath"
+	// "path/filepath"
 	"fmt"
 	"os"
 	"strings"
@@ -14,45 +14,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// var DATA_PATH = "example.yaml"
-var DATA_PATH = filepath.Join(os.Getenv("HOME"), "go/bin/data/tasks.yaml")
-const MAX_DAYS = 50
-const MAX_FUTURE_DAYS = 10
-
-func Unmarshal() (*map[string][]*YamlTask, []string) {
-	data, err := os.ReadFile(DATA_PATH)
-	if err != nil {
-		panic(err)
-	}
-
-	yamlTask := make(map[string][]*YamlTask)
-	if err := yaml.Unmarshal(data, &yamlTask); err != nil {
-		panic(err)
-	}
-
-	names := []string{}
-	for group, tasks := range yamlTask {
-		names = append(names, group)
-		for _, task := range tasks {
-			names = append(names, task.Alias...)
-		}
-	}
-
-	return &yamlTask, names
-}
-
-func Marshal(yamlTask *map[string][]*YamlTask) {
-	// enc := yaml.NewEncoder(os.Stdout)
-    // enc.SetIndent(2)
-    // defer enc.Close()
-
-    // enc.Encode(output)
-	data, err := yaml.Marshal(yamlTask)
-	err = os.WriteFile(DATA_PATH, data, 0644)
-	if err != nil {
-		panic(err)
-	}
-}
+var DATA_PATH = "tasks.yaml"
+// var DATA_PATH = filepath.Join(os.Getenv("HOME"), "go/bin/data/tasks.yaml")
+const MAX_DAYS = 60
 
 type YamlTask struct {
 	Name string `yaml:"name"` // unique
@@ -60,119 +24,121 @@ type YamlTask struct {
 	Alias []string `yaml:"alias,flow"`
 }
 
-type Task struct {
+type CliTask struct {
 	Name string
 	Dates []time.Time
 	Alias []string
 }
 
-func Query(query map[string]struct{}, yamlTask *map[string][]*YamlTask) *map[string][]*YamlTask {
-	res := make(map[string][]*YamlTask)
-	for groupName, tasks := range *yamlTask {
-		if _, ok := query[groupName]; ok {
-			res[groupName] = append(res[groupName], tasks...)
+func Unmarshal() ([]*YamlTask, []string) {
+	data, err := os.ReadFile(DATA_PATH)
+	if err != nil {
+		panic(err)
+	}
+
+	yamlTasks := []*YamlTask{}
+	if err := yaml.Unmarshal(data, &yamlTasks); err != nil {
+		panic(err)
+	}
+
+	names := []string{}
+	for _, yamlTask := range yamlTasks {
+		names = append(names, yamlTask.Name)
+		names = append(names, yamlTask.Alias...)
+	}
+
+	return yamlTasks, names
+}
+
+func Marshal(yamlTasks []*YamlTask) {
+	data, err := yaml.Marshal(yamlTasks)
+	err = os.WriteFile(DATA_PATH, data, 0644)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func Query(query map[string]struct{}, yamlTasks []*YamlTask) []*YamlTask {
+	if len(query) == 0 {
+		return yamlTasks
+	}
+
+	res := []*YamlTask{}
+	for _, yamlTask := range yamlTasks {
+		if _, ok := query[yamlTask.Name]; ok {
+			res = append(res, yamlTask)
 		} else {
-			for _, task := range tasks {
-				if _, ok := query[task.Name]; ok {
-					res[groupName] = append(res[groupName], task)
-				} else {
-					for _, alias := range task.Alias {
-						if _, ok := query[alias]; ok {
-							res[groupName] = append(res[groupName], task)
-						}
-					}
+			for _, alias := range yamlTask.Alias {
+				if _, ok := query[alias]; ok {
+					res = append(res, yamlTask)
+					break
 				}
 			}
 		}
 	}
-	return &res
+	return res
 }
 
-func Check(yamlTask *map[string][]*YamlTask) {
+func Check(yamlTasks []*YamlTask) {
 	today := date2String(time.Now())
-	for _, tasks := range *yamlTask {
-		for _, task := range tasks {
-			if len(task.Dates) == 0 || task.Dates[len(task.Dates) - 1] != today {
-				task.Dates = append(task.Dates, today)
-				fmt.Println("Checking", task.Name)
-			} else {
-				fmt.Println("Already checked", task.Name, "today.")
-			}
+	for _, yamlTask := range yamlTasks {
+		if len(yamlTask.Dates) == 0 ||
+				yamlTask.Dates[len(yamlTask.Dates) - 1] != today {
+			yamlTask.Dates = append(yamlTask.Dates, today)
+			fmt.Println("Checked", yamlTask.Name)
+		} else {
+			fmt.Println("Already checked", yamlTask.Name, "today.")
 		}
 	}
 }
 
-func YamlTasks2Tasks(yamlTask *map[string][]*YamlTask) *map[string][]*Task {
-	res := make(map[string][]*Task)
-	for groupName, yamlTasks := range *yamlTask {
-		for _, yamlTask := range yamlTasks {
-			dates := strings2Dates(yamlTask.Dates)
-			res[groupName] = append(res[groupName], &Task{
-				Name: yamlTask.Name,
-				Dates: dates,
-			})
-		}
+func yamlTask2CliTask(yamlTask *YamlTask) *CliTask {
+	cliTask := CliTask {
+		Name: yamlTask.Name,
+		Dates: strings2Dates(yamlTask.Dates),
+		Alias: yamlTask.Alias,
 	}
-	return &res
+	return &cliTask
 }
 
-func Tasks2YamlTasks(task *map[string][]*Task) *map[string][]*YamlTask {
-	res := make(map[string][]*YamlTask)
-	for groupName, tasks := range *task {
-		for _, task := range tasks {
-			dates := dates2Strings(task.Dates)
-			res[groupName] = append(res[groupName], &YamlTask{
-				Name: task.Name,
-				Dates: dates,
-				Alias: task.Alias,
-			})
-		}
-	}
-	return &res
-}
-
-func Print(YamlTask *map[string][]*YamlTask) {
-	ts := YamlTasks2Tasks(YamlTask)
-	var tw = tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	// Print the header like - - * - - - - - - * - - - - - - |
-	var sb strings.Builder
+func Print(yamlTask []*YamlTask) {
+	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	// Print the header like - - | - - - - - - | - - - - - - |
+	trackerLen := MAX_DAYS * 2
+	sb := strings.Builder{}
+	// sb.Grow(trackerLen)
 	sb.WriteString(strings.Repeat(" -", (MAX_DAYS - 1) % 7))
-	sb.WriteString(strings.Repeat(" * - - - - - -", (MAX_DAYS - 1) / 7))
+	sb.WriteString(strings.Repeat(" | - - - - - -", (MAX_DAYS - 1) / 7))
 	sb.WriteString(" |")
-	for groupName, tasks := range *ts {
-		fmt.Fprintln(tw, groupName)
-		fmt.Fprintln(tw, sb.String(), "\t", "Item")
-		for _, task := range tasks {
-			fmt.Fprintln(tw, dates2Tracker(task.Dates), "\t", task.Name)
+	fmt.Fprintln(tw, sb.String(), "\t", "Task")
+	sb.Reset()
+    
+	for _, yamlTask := range yamlTask {
+		cliTask := yamlTask2CliTask(yamlTask)
+		laterDate := time.Now().AddDate(0, 0, 1) // sentinel
+		for i := len(cliTask.Dates) - 1; i >= 0 && sb.Len() <= trackerLen; i-- {
+			curDate := cliTask.Dates[i]
+			gap := countDays(curDate, laterDate)
+			if gap <= 0 || gap >= MAX_DAYS {
+				fmt.Printf(
+					"WARNING: suspicious date %s in %s.\n",
+					date2String(curDate), cliTask.Name)
+			}
+			sb.WriteString(strings.Repeat(". ", gap - 1))
+     		sb.WriteString("# ")
+			laterDate = curDate
 		}
-		fmt.Fprintln(tw, "")
+		if sb.Len() < trackerLen {
+			sb.WriteString(strings.Repeat(". ", (trackerLen - sb.Len()) / 2))
+		}
+		// Reverse the string.
+		tracker := []byte(sb.String())[:trackerLen]
+		for i, j := 0, trackerLen - 1; i < j; i, j = i + 1, j - 1 {
+			tracker[i], tracker[j] = tracker[j], tracker[i]
+		}
+		fmt.Fprintln(tw, string(tracker), "\t", cliTask.Name)
+		sb.Reset()
 	}
-	tw.Flush()
-}
 
-func dates2Tracker(dates []time.Time) string {
-	maxLength := MAX_DAYS * 2
-	var sb strings.Builder
-	// Print date tracker like . . . # . # # . . . .   # means checked.
-	laterDate := time.Now().AddDate(0, 0, 1)
-	for i := len(dates) - 1; i >= 0 && sb.Len() <= maxLength; i-- {
-		gap := countDays(dates[i], laterDate)
-		if gap == 0 {
-			panic("dates2Tracker: duplicate dates")
-		}
-		sb.WriteString(strings.Repeat(". ", gap - 1))
-		sb.WriteString("# ")
-		laterDate = dates[i]
-	}
-	// If there are still days to fill, fill with dots.
-	if sb.Len() < maxLength {
-		sb.WriteString(strings.Repeat(". ", (maxLength - sb.Len()) / 2))
-	}
-	tracker := []byte(sb.String())
-	tracker = tracker[:maxLength]
-	// Reverse the tracker to make it in the right order.
-	for i, j := 0, len(tracker) - 1; i < j; i, j = i + 1, j - 1 {
-		tracker[i], tracker[j] = tracker[j], tracker[i]
-	}
-	return string(tracker)
+	tw.Flush()
 }

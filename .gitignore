@@ -33,3 +33,6 @@ date-tracker
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Data
+tasks.yaml
