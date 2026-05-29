@@ -21,7 +21,8 @@ var showCmd = &cobra.Command{
 		for _, arg := range args {
 			query[arg] = struct{}{}
 		}
-		Print(Query(query, yamlTasks))
+		urgency, _ := cmd.Flags().GetBool("urgency")
+		Print(Query(query, yamlTasks), urgency)
 		Marshal(yamlTasks)
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -33,6 +34,7 @@ var showCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(showCmd)
+	showCmd.Flags().BoolP("urgency", "u", false, "Sort output tasks by urgency (countdown)")
 
 	// Here you will define your flags and configuration settings.
 
