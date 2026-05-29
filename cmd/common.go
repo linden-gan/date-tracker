@@ -4,7 +4,7 @@ Copyright © 2025 ganlinden@gmail.com
 package cmd
 
 import (
-	// "path/filepath"
+	"path/filepath"
 	"fmt"
 	"os"
 	"strings"
@@ -14,8 +14,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var DATA_PATH = "tasks.yaml"
-// var DATA_PATH = filepath.Join(os.Getenv("HOME"), "go/bin/data/tasks.yaml")
+// var DATA_PATH = "example.yaml"
+var DATA_PATH = filepath.Join(os.Getenv("HOME"), "go/bin/data/tasks.yaml")
 const MAX_DAYS = 60
 
 type YamlTask struct {
