@@ -8,9 +8,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// checkCmd represents the check command
-var checkCmd = &cobra.Command{
-	Use:   "check [name] ...",
+// tickCmd represents the tick command
+var tickCmd = &cobra.Command{
+	Use:   "tick [name] ...",
 	Short: "A brief description of your command",
 	Long: ``,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -19,7 +19,7 @@ var checkCmd = &cobra.Command{
 		for _, arg := range args {
 			query[arg] = struct{}{}
 		}
-		Check(Query(query, yamlTasks))
+		Tick(Query(query, yamlTasks))
 		Marshal(yamlTasks)
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -30,15 +30,15 @@ var checkCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(tickCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// checkCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// tickCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// checkCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// tickCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

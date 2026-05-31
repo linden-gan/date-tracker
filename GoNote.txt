@@ -9,7 +9,7 @@ go list  # list dependencies
 go list -m all  # list all dependencies recursively in this module
 
 go build
-go build -o ~/go/bin/tk
+go build -o ~/go/bin/dt
 
 cobra-cli init
 cobra-cli add <sub_command>

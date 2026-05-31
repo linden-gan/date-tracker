@@ -1,13 +1,13 @@
 # date-tracker
 Track multiple recurring tasks in daily granularity.
-Use very simple subcommands like `show` and `check` to show activities in past days and check-mark today.
+Use simple subcommands to `show` activities in past days and `tick` any tasks.
 You can pass the names or alias of one or more tasks.
 The yaml data file is human readable and editable for more flexibility.
 Tab completion is enabled.
 
 ## Build
-`go build -o ~/go/bin/tk`
-You can add `export PATH=$PATH:$HOME/go/bin` to ~/.zshrc to run `tk` command everywhere.
+`go build -o ~/go/bin/dt`
+You can add `export PATH=$PATH:$HOME/go/bin` to ~/.zshrc to run `dt` command everywhere.
 
 ## Create yaml for your data
 You can refer to the format of example.yaml and create your own task.yaml in ~/go/bin/data

@@ -82,15 +82,15 @@ func Query(query map[string]struct{}, yamlTasks []*YamlTask) []*YamlTask {
 	return res
 }
 
-func Check(yamlTasks []*YamlTask) {
+func Tick(yamlTasks []*YamlTask) {
 	today := date2String(time.Now())
 	for _, yamlTask := range yamlTasks {
 		if len(yamlTask.Dates) == 0 ||
 				yamlTask.Dates[len(yamlTask.Dates) - 1] != today {
 			yamlTask.Dates = append(yamlTask.Dates, today)
-			fmt.Println("Checked", yamlTask.Name)
+			fmt.Println("Ticked", yamlTask.Name)
 		} else {
-			fmt.Println("Already checked", yamlTask.Name, "today.")
+			fmt.Println("Already ticked", yamlTask.Name, "today.")
 		}
 	}
 }
@@ -121,25 +121,52 @@ func countDown(dates []time.Time) int {
 	}
 	frequency := float64(countDays(dates[len(dates) - 2], dates[len(dates) - 1]))
 	if len(dates) > 2 {
-		frequency = 0.7 * frequency + 0.3 * float64(countDays(dates[len(dates) - 3], dates[len(dates) - 2]))
+		frequency = 0.7 * frequency +
+			0.3 * float64(countDays(dates[len(dates) - 3], dates[len(dates) - 2]))
 	}
 	countDown := frequency - float64(countDays(dates[len(dates) - 1], time.Now()))
 	return int(math.Round(countDown))
+}
+
+// Make header like - - | - - - - - - | - - - - - - |
+func makeHeader() string {
+	return strings.Repeat(" -", (MAX_DAYS - 1) % 7) +
+		strings.Repeat(" | - - - - - -", (MAX_DAYS - 1) / 7) + " |"
+}
+
+// Make date tracker from past dates to today like  . . . # . # . . # . . # . # . .
+func makeTracker(cliTask *CliTask) string {
+	trackerLen := MAX_DAYS * 2
+	sb := strings.Builder{}
+	laterDate := time.Now().AddDate(0, 0, 1) // sentinel
+	for i := len(cliTask.Dates) - 1; i >= 0 && sb.Len() <= trackerLen; i-- {
+		curDate := cliTask.Dates[i]
+		gap := countDays(curDate, laterDate)
+		if gap <= 0 || gap >= MAX_DAYS {
+			fmt.Printf(
+				"WARNING: suspicious date %s in %s.\n",
+				date2String(curDate), cliTask.Name)
+		}
+		sb.WriteString(strings.Repeat(". ", gap - 1))
+		sb.WriteString("# ")
+		laterDate = curDate
+	}
+	if sb.Len() < trackerLen {
+		sb.WriteString(strings.Repeat(". ", (trackerLen - sb.Len()) / 2))
+	}
+	// Reverse the string.
+	tracker := []byte(sb.String())[:trackerLen]
+	for i, j := 0, trackerLen - 1; i < j; i, j = i + 1, j - 1 {
+		tracker[i], tracker[j] = tracker[j], tracker[i]
+	}
+	return string(tracker)
 }
 
 func Print(yamlTasks []*YamlTask, urgency bool) {
 	cliTasks := yamlTasks2CliTasks(yamlTasks)
 
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	// Print the header like - - | - - - - - - | - - - - - - |
-	trackerLen := MAX_DAYS * 2
-	sb := strings.Builder{}
-	// sb.Grow(trackerLen)
-	sb.WriteString(strings.Repeat(" -", (MAX_DAYS - 1) % 7))
-	sb.WriteString(strings.Repeat(" | - - - - - -", (MAX_DAYS - 1) / 7))
-	sb.WriteString(" |")
-	fmt.Fprintln(tw, sb.String(), "\t", "Next", "\t", "Task")
-	sb.Reset()
+	fmt.Fprintln(tw, makeHeader(), "\t", "Next", "\t", "Task")
 
 	if urgency {
 		sort.Slice(cliTasks, func(i, j int) bool {
@@ -148,29 +175,7 @@ func Print(yamlTasks []*YamlTask, urgency bool) {
 	}
     
 	for _, cliTask := range cliTasks {
-		laterDate := time.Now().AddDate(0, 0, 1) // sentinel
-		for i := len(cliTask.Dates) - 1; i >= 0 && sb.Len() <= trackerLen; i-- {
-			curDate := cliTask.Dates[i]
-			gap := countDays(curDate, laterDate)
-			if gap <= 0 || gap >= MAX_DAYS {
-				fmt.Printf(
-					"WARNING: suspicious date %s in %s.\n",
-					date2String(curDate), cliTask.Name)
-			}
-			sb.WriteString(strings.Repeat(". ", gap - 1))
-     		sb.WriteString("# ")
-			laterDate = curDate
-		}
-		if sb.Len() < trackerLen {
-			sb.WriteString(strings.Repeat(". ", (trackerLen - sb.Len()) / 2))
-		}
-		// Reverse the string.
-		tracker := []byte(sb.String())[:trackerLen]
-		for i, j := 0, trackerLen - 1; i < j; i, j = i + 1, j - 1 {
-			tracker[i], tracker[j] = tracker[j], tracker[i]
-		}
-		fmt.Fprintln(tw, string(tracker), "\t", cliTask.CountDown, "\t", cliTask.Name)
-		sb.Reset()
+		fmt.Fprintln(tw, makeTracker(cliTask), "\t", cliTask.CountDown, "\t", cliTask.Name)
 	}
 
 	tw.Flush()
