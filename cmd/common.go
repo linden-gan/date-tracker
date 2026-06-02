@@ -4,7 +4,7 @@ Copyright © 2025 ganlinden@gmail.com
 package cmd
 
 import (
-	"path/filepath"
+	// "path/filepath"
 	"fmt"
 	"math"
 	"os"
@@ -16,18 +16,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// var DATA_PATH = "test.yaml"
-var DATA_PATH = filepath.Join(os.Getenv("HOME"), "go/bin/data/tasks.yaml")
+var DATA_PATH = "example.yaml"
+// var DATA_PATH = filepath.Join(os.Getenv("HOME"), "go/bin/data/tasks.yaml")
 const MAX_DAYS = 60
 
 type YamlTask struct {
 	Name string `yaml:"name"` // unique
+	Block string `yaml:"block"`
 	Dates []string `yaml:"dates,flow"` // [12/25, 12/30, 1/2, 1/6]
 	Alias []string `yaml:"alias,flow"`
 }
 
 type CliTask struct {
 	Name string
+	Block string
 	Dates []time.Time
 	Alias []string
 	CountDown int
@@ -70,6 +72,8 @@ func Query(query map[string]struct{}, yamlTasks []*YamlTask) []*YamlTask {
 	for _, yamlTask := range yamlTasks {
 		if _, ok := query[yamlTask.Name]; ok {
 			res = append(res, yamlTask)
+		} else if _, ok := query[yamlTask.Block]; ok {
+			res = append(res, yamlTask)
 		} else {
 			for _, alias := range yamlTask.Alias {
 				if _, ok := query[alias]; ok {
@@ -99,6 +103,7 @@ func yamlTask2CliTask(yamlTask *YamlTask) *CliTask {
 	dates := strings2Dates(yamlTask.Dates)
 	cliTask := CliTask {
 		Name: yamlTask.Name,
+		Block: yamlTask.Block,
 		Dates: dates,
 		Alias: yamlTask.Alias,
 		CountDown: countDown(dates),
@@ -128,14 +133,14 @@ func countDown(dates []time.Time) int {
 	return int(math.Round(countDown))
 }
 
-// Make header like - - | - - - - - - | - - - - - - |
-func makeHeader() string {
+// Sprint header like  - - | - - - - - - | - - - - - - |
+func sprintHeader() string {
 	return strings.Repeat(" -", (MAX_DAYS - 1) % 7) +
 		strings.Repeat(" | - - - - - -", (MAX_DAYS - 1) / 7) + " |"
 }
 
-// Make date tracker from past dates to today like  . . . # . # . . # . . # . # . .
-func makeTracker(cliTask *CliTask) string {
+// Sprint date tracker from past dates to today like  . . . # . # . . # . . # . # . .
+func sprintTracker(cliTask *CliTask) string {
 	trackerLen := MAX_DAYS * 2
 	sb := strings.Builder{}
 	laterDate := time.Now().AddDate(0, 0, 1) // sentinel
@@ -163,20 +168,32 @@ func makeTracker(cliTask *CliTask) string {
 }
 
 func Print(yamlTasks []*YamlTask, urgency bool) {
-	cliTasks := yamlTasks2CliTasks(yamlTasks)
-
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, makeHeader(), "\t", "Next", "\t", "Task")
+	cliTasks := yamlTasks2CliTasks(yamlTasks)
+	header := sprintHeader()
 
-	if urgency {
-		sort.Slice(cliTasks, func(i, j int) bool {
-			return cliTasks[i].CountDown < cliTasks[j].CountDown
-		})
-	}
-    
+	blocks2Tasks := make(map[string][]*CliTask)
+	orderedBlocks := []string{}
 	for _, cliTask := range cliTasks {
-		fmt.Fprintln(tw, makeTracker(cliTask), "\t", cliTask.CountDown, "\t", cliTask.Name)
+		if _, ok := blocks2Tasks[cliTask.Block]; !ok {
+			orderedBlocks = append(orderedBlocks, cliTask.Block)
+		}
+		blocks2Tasks[cliTask.Block] = append(blocks2Tasks[cliTask.Block], cliTask)
 	}
-
+	
+	for _, block := range orderedBlocks {
+		tasks := blocks2Tasks[block]
+		if urgency {
+			sort.Slice(tasks, func(i, j int) bool {
+				return tasks[i].CountDown < tasks[j].CountDown
+			})
+		}
+		
+		fmt.Fprintln(tw, "Block:", block)
+		fmt.Fprintln(tw, header, "\t", "Next", "\t", "Task")
+		for _, task := range tasks {
+			fmt.Fprintln(tw, sprintTracker(task), "\t", task.CountDown, "\t", task.Name)
+		}
+	}
 	tw.Flush()
 }

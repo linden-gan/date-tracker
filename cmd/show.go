@@ -21,7 +21,6 @@ var showCmd = &cobra.Command{
 		}
 		urgency, _ := cmd.Flags().GetBool("urgency")
 		Print(Query(query, yamlTasks), urgency)
-		Marshal(yamlTasks)
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		// Return dynamic completions based on user's data
