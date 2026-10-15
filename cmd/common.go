@@ -25,6 +25,7 @@ type YamlTask struct {
 	Block string `yaml:"block"`
 	Dates []string `yaml:"dates,flow"` // [12/25, 12/30, 1/2, 1/6]
 	Alias []string `yaml:"alias,flow"`
+	Frequency int `yaml:"frequency"` // in days, optional
 }
 
 type CliTask struct {
@@ -32,6 +33,7 @@ type CliTask struct {
 	Block string
 	Dates []time.Time
 	Alias []string
+	Frequency int
 	CountDown int
 }
 
@@ -83,6 +85,9 @@ func Query(query map[string]struct{}, yamlTasks []*YamlTask) []*YamlTask {
 			}
 		}
 	}
+	if len(res) == 0 {
+		fmt.Println("Warning: no matching tasks found.")
+	}
 	return res
 }
 
@@ -101,12 +106,26 @@ func Tick(yamlTasks []*YamlTask) {
 
 func yamlTask2CliTask(yamlTask *YamlTask) *CliTask {
 	dates := strings2Dates(yamlTask.Dates)
+	frequency := yamlTask.Frequency
+	if frequency == 0 && len(dates) >= 2 { // Can deduce frequency
+		frequency = countDays(dates[len(dates) - 2], dates[len(dates) - 1])
+		if len(dates) > 2 {
+			frequency = int(math.Round(
+				0.7 * float64(frequency) +
+				0.3 * float64(countDays(dates[len(dates) - 3], dates[len(dates) - 2]))))
+		}
+	}
+	countDown := 0
+	if frequency != 0 && len(dates) >= 2 {
+		countDown = frequency - countDays(dates[len(dates) - 1], time.Now())
+	}
 	cliTask := CliTask {
 		Name: yamlTask.Name,
 		Block: yamlTask.Block,
 		Dates: dates,
 		Alias: yamlTask.Alias,
-		CountDown: countDown(dates),
+		Frequency: frequency,
+		CountDown: countDown,
 	}
 	return &cliTask
 }
@@ -167,7 +186,7 @@ func sprintTracker(cliTask *CliTask) string {
 	return string(tracker)
 }
 
-func Print(yamlTasks []*YamlTask, urgency bool) {
+func Print(yamlTasks []*YamlTask, urgency bool, frequency bool) {
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	cliTasks := yamlTasks2CliTasks(yamlTasks)
 	header := sprintHeader()
@@ -187,12 +206,16 @@ func Print(yamlTasks []*YamlTask, urgency bool) {
 			sort.Slice(tasks, func(i, j int) bool {
 				return tasks[i].CountDown < tasks[j].CountDown
 			})
+		} else if frequency {
+			sort.Slice(tasks, func(i, j int) bool {
+				return tasks[i].Frequency < tasks[j].Frequency
+			})
 		}
 		
 		fmt.Fprintln(tw, "Block:", block)
-		fmt.Fprintln(tw, header, "\t", "Next", "\t", "Task")
+		fmt.Fprintln(tw, header, "\t", "Next", "\t", "Freq", "\t", "Task")
 		for _, task := range tasks {
-			fmt.Fprintln(tw, sprintTracker(task), "\t", task.CountDown, "\t", task.Name)
+			fmt.Fprintln(tw, sprintTracker(task), "\t", task.CountDown, "\t", task.Frequency, "\t", task.Name)
 		}
 	}
 	tw.Flush()

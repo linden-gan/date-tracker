@@ -5,13 +5,14 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"github.com/spf13/cobra"
 )
 
 // showCmd represents the show command
 var showCmd = &cobra.Command{
 	Use:   "show [name] ...",
-	Short: "A brief description of your command",
+	Short: "Show tasks' date tracker in  . . # . # . format",
 	Long: ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		var yamlTasks, _ = Unmarshal()
@@ -20,7 +21,11 @@ var showCmd = &cobra.Command{
 			query[arg] = struct{}{}
 		}
 		urgency, _ := cmd.Flags().GetBool("urgency")
-		Print(Query(query, yamlTasks), urgency)
+		frequency, _ := cmd.Flags().GetBool("frequency")
+		if urgency && frequency {
+			fmt.Println("Warning: cannot sort by both urgency and frequency. Urgency will be used.")
+		}
+		Print(Query(query, yamlTasks), urgency, frequency)
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		// Return dynamic completions based on user's data
@@ -32,14 +37,5 @@ var showCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(showCmd)
 	showCmd.Flags().BoolP("urgency", "u", false, "Sort output tasks by urgency (countdown)")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// showCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// showCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	showCmd.Flags().BoolP("frequency", "f", false, "Sort output tasks by frequency")
 }
