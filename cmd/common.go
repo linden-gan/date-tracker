@@ -104,6 +104,18 @@ func Tick(yamlTasks []*YamlTask) {
 	}
 }
 
+func Untick(yamlTasks []*YamlTask) {
+	today := date2String(time.Now())
+	for _, yamlTask := range yamlTasks {
+		if len(yamlTask.Dates) > 0 && yamlTask.Dates[len(yamlTask.Dates) - 1] == today {
+			yamlTask.Dates = yamlTask.Dates[:len(yamlTask.Dates)-1]
+			fmt.Println("Unticked", yamlTask.Name)
+		} else {
+			fmt.Println(yamlTask.Name, "had not been ticked today.")
+		}
+	}
+}
+
 func yamlTask2CliTask(yamlTask *YamlTask) *CliTask {
 	dates := strings2Dates(yamlTask.Dates)
 	frequency := yamlTask.Frequency
